@@ -1,4 +1,4 @@
-const BASE_URL = 'https://baphp.dinaspu.com/'
+const BASE_URL = 'https://baphp.dinaspu.com/api.php'
 
 export const uploadToSynologyLocal = async (file, jobName = '') => {
   const formData = new FormData()
