@@ -1,8 +1,11 @@
-const BASE_URL = 'http://10.40.9.2:8085/api.php'
+const BASE_URL = '/api.php'
 
-export const uploadToSynologyLocal = async (file) => {
+export const uploadToSynologyLocal = async (file, jobName = '') => {
   const formData = new FormData()
   formData.append('file', file)
+  if (jobName) {
+    formData.append('custom_name', jobName)
+  }
 
   const uploadRes = await fetch(BASE_URL, {
     method: 'POST',
@@ -15,12 +18,25 @@ export const uploadToSynologyLocal = async (file) => {
     throw new Error(`Upload Synology Gagal!`)
   }
 
-  // Mengembalikan URL langsung dari hasil penyimpanan PHP
   return uploadData.data.url
 }
 
 export const deleteFromSynologyLocal = async (pdfUrlOrPath) => {
   if (!pdfUrlOrPath) return true
-  // Karena file dikelola langsung via PHP, proses hapus dapat ditangani atau diabaikan jika menggunakan timestamp unik
+
+  let filePath = pdfUrlOrPath
+  if (pdfUrlOrPath.startsWith('http')) {
+    const fileName = pdfUrlOrPath.split('/').pop()
+    filePath = `/volume1/Aset/BAPHP/${fileName}`
+  }
+
+  try {
+    await fetch(`${BASE_URL}?action=delete&path=${encodeURIComponent(filePath)}`, {
+      method: 'DELETE'
+    })
+  } catch (err) {
+    console.error("Gagal menghapus file lama:", err)
+  }
+
   return true
 }

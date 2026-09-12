@@ -116,7 +116,13 @@ export default function App() {
     setLoading(true)
     try {
       let uploadedUrl = formData.url_pdf
+
       if (pdfFile) {
+        // Jika sedang edit dan ada file lama di Synology, hapus dulu file lamanya agar tidak double
+        if (editId && formData.url_pdf) {
+          await deleteFromSynologyLocal(formData.url_pdf)
+        }
+
         const namaPekerjaan = (formData.nama_pekerjaan || 'Pekerjaan').replace(/[/\\?%*:|"<>]/g, '-')
         const newFileName = `BA_${namaPekerjaan}.pdf`
         const renamedPdfFile = new File([pdfFile], newFileName, { type: pdfFile.type })
@@ -280,10 +286,10 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-800 font-sans antialiased relative">
-      <Sidebar 
-        user={user} 
-        onLogoutClick={() => setShowLogoutModal(true)} 
-        handleTambahBaru={handleTambahBaru} 
+      <Sidebar
+        user={user}
+        onLogoutClick={() => setShowLogoutModal(true)}
+        handleTambahBaru={handleTambahBaru}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -292,7 +298,7 @@ export default function App() {
         <main className="p-6 lg:p-8 space-y-6">
           <Routes>
             <Route path="/" element={
-              <Dashboard 
+              <Dashboard
                 dataList={dataList}
                 loading={loading}
                 fetchData={fetchData}
@@ -325,7 +331,7 @@ export default function App() {
               />
             } />
             <Route path="/tambah" element={
-              <KontrakForm 
+              <KontrakForm
                 editId={editId}
                 formData={formData}
                 handleChange={handleChange}
@@ -338,10 +344,10 @@ export default function App() {
         </main>
       </div>
 
-      <LogoutModal 
-        show={showLogoutModal} 
-        onClose={() => setShowLogoutModal(false)} 
-        onConfirm={confirmLogout} 
+      <LogoutModal
+        show={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={confirmLogout}
       />
     </div>
   )
