@@ -6,10 +6,14 @@ export default function Dashboard({
   fetchData,
   searchTerm,
   setSearchTerm,
-  startDate,
-  setStartDate,
-  endDate,
-  setEndDate,
+  startKontrak,
+  setStartKontrak,
+  endKontrak,
+  setEndKontrak,
+  startBast,
+  setStartBast,
+  endBast,
+  setEndBast,
   currentPage,
   setCurrentPage,
   itemsPerPage,
@@ -29,7 +33,9 @@ export default function Dashboard({
   indexOfFirstItem,
   indexOfLastItem,
   totalPages,
-  totalNilaiKontrak
+  totalKontrak,
+  totalNilaiKontrak,
+  totalMitraPerusahaan
 }) {
   return (
     <div className="space-y-6">
@@ -44,7 +50,7 @@ export default function Dashboard({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
           <p className="text-xs text-slate-500">Total Kontrak</p>
-          <p className="text-2xl font-bold text-slate-900 mt-1">{dataList.length}</p>
+          <p className="text-2xl font-bold text-slate-900 mt-1">{totalKontrak}</p>
         </div>
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
           <p className="text-xs text-slate-500">Total Nilai</p>
@@ -53,7 +59,7 @@ export default function Dashboard({
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
           <p className="text-xs text-slate-500">Mitra Perusahaan</p>
           <p className="text-2xl font-bold text-slate-900 mt-1">
-            {new Set(dataList.map(i => i.nama_perusahaan).filter(Boolean)).size}
+            {totalMitraPerusahaan}
           </p>
         </div>
       </div>
@@ -87,7 +93,7 @@ export default function Dashboard({
               >
                 📄 PDF
               </button>
-              {(startDate || endDate || searchTerm) && (
+              {(startKontrak || endKontrak || startBast || endBast || searchTerm) && (
                 <button
                   type="button"
                   onClick={handleResetFilter}
@@ -119,25 +125,48 @@ export default function Dashboard({
             )}
           </div>
 
-          {/* FILTER & ENTRIES */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-1 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold text-slate-500">Filter Tgl Kontrak:</span>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
-              />
-              <span className="text-slate-400">s/d</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
-              />
+          {/* DUAL DATE FILTERS & ENTRIES */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-1 text-xs items-center">
+            {/* Filter Tanggal Kontrak */}
+            <div className="lg:col-span-8 flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-500 whitespace-nowrap">Tgl Kontrak:</span>
+                <input
+                  type="date"
+                  value={startKontrak}
+                  onChange={(e) => { setStartKontrak(e.target.value); setCurrentPage(1); }}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-slate-400">s/d</span>
+                <input
+                  type="date"
+                  value={endKontrak}
+                  onChange={(e) => { setEndKontrak(e.target.value); setCurrentPage(1); }}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Filter Tanggal BAST */}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-500 whitespace-nowrap">Tgl BAST:</span>
+                <input
+                  type="date"
+                  value={startBast}
+                  onChange={(e) => { setStartBast(e.target.value); setCurrentPage(1); }}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
+                />
+                <span className="text-slate-400">s/d</span>
+                <input
+                  type="date"
+                  value={endBast}
+                  onChange={(e) => { setEndBast(e.target.value); setCurrentPage(1); }}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            {/* Entries Dropdown */}
+            <div className="lg:col-span-4 flex items-center justify-end gap-2">
               <span className="text-slate-500 font-medium">Tampilkan:</span>
               <select
                 value={itemsPerPage}

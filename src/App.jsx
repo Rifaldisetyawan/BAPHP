@@ -5,6 +5,7 @@ import Login from './login'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
 import LogoutModal from './components/LogoutModals'
+import InactivityModal from './components/InactivityModal'
 import KontrakForm from './components/KontrakForm'
 import Dashboard from './components/Dashboard'
 import { getKontrak, createKontrak, updateKontrak, deleteKontrak } from './services/KontrakService'
@@ -15,7 +16,7 @@ import autoTable from 'jspdf-autotable'
 
 export default function App() {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('baphp_user')
+    const savedUser = sessionStorage.getItem('baphp_user')
     return savedUser ? JSON.parse(savedUser) : null
   })
 
@@ -25,8 +26,14 @@ export default function App() {
   const [pdfFile, setPdfFile] = useState(null)
   const [editId, setEditId] = useState(null)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [showInactivityModal, setShowInactivityModal] = useState(false)
+  const [countdown, setCountdown] = useState(60) // Hitung mundur 60 detik (1 menit)
+  
+  const [startKontrak, setStartKontrak] = useState('')
+  const [endKontrak, setEndKontrak] = useState('')
+  const [startBast, setStartBast] = useState('')
+  const [endBast, setEndBast] = useState('')
+
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [openDropdownId, setOpenDropdownId] = useState(null)
@@ -58,6 +65,53 @@ export default function App() {
     if (user) fetchData()
   }, [user])
 
+  // Timer Inaktivitas: Peringatan muncul setelah 9 menit (540,000 ms)
+  useEffect(() => {
+    if (!user) return
+
+    let inactivityTimer
+
+    const resetTimers = () => {
+      if (showInactivityModal) return
+      clearTimeout(inactivityTimer)
+      setCountdown(60)
+
+      inactivityTimer = setTimeout(() => {
+        setShowInactivityModal(true)
+      }, 10 * 60 * 1000) // 9 menit
+    }
+
+    const events = ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart']
+    const handleActivity = () => resetTimers()
+
+    events.forEach(event => window.addEventListener(event, handleActivity))
+    resetTimers()
+
+    return () => {
+      clearTimeout(inactivityTimer)
+      events.forEach(event => window.removeEventListener(event, handleActivity))
+    }
+  }, [user, showInactivityModal])
+
+  // Timer Hitung Mundur 1 Menit saat Modal Peringatan Muncul
+  useEffect(() => {
+    if (!showInactivityModal) return
+
+    setCountdown(60)
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          confirmLogout() // Auto logout pas di menit ke-10
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [showInactivityModal])
+
   useEffect(() => {
     const handleClickOutside = () => setOpenDropdownId(null)
     window.addEventListener('click', handleClickOutside)
@@ -66,10 +120,11 @@ export default function App() {
 
   const confirmLogout = async () => {
     setShowLogoutModal(false)
+    setShowInactivityModal(false)
     setLoading(true)
     try {
       await supabase.auth.signOut()
-      localStorage.removeItem('baphp_user')
+      sessionStorage.removeItem('baphp_user')
       setUser(null)
       navigate('/')
     } catch (error) {
@@ -118,7 +173,6 @@ export default function App() {
       let uploadedUrl = formData.url_pdf
 
       if (pdfFile) {
-        // Jika sedang edit dan ada file lama di Synology, hapus dulu file lamanya agar tidak double
         if (editId && formData.url_pdf) {
           await deleteFromSynologyLocal(formData.url_pdf)
         }
@@ -197,48 +251,94 @@ export default function App() {
       item.no_kontrak?.toLowerCase().includes(s) ||
       item.no_bast?.toLowerCase().includes(s)
 
-    let matchesDate = true
-    if (startDate || endDate) {
-      const itemDate = item.tgl_kontrak ? new Date(item.tgl_kontrak) : null
-      if (itemDate) {
-        if (startDate && itemDate < new Date(startDate)) matchesDate = false
-        if (endDate && itemDate > new Date(endDate + 'T23:59:59')) matchesDate = false
+    const tglKontrakStr = item.tgl_kontrak ? item.tgl_kontrak.substring(0, 10) : ''
+    const tglBastStr = item.tgl_bast ? item.tgl_bast.substring(0, 10) : ''
+
+    let matchesKontrakDate = true
+    if (startKontrak || endKontrak) {
+      if (!tglKontrakStr) {
+        matchesKontrakDate = false
       } else {
-        matchesDate = false
+        if (startKontrak && tglKontrakStr < startKontrak) matchesKontrakDate = false
+        if (endKontrak && tglKontrakStr > endKontrak) matchesKontrakDate = false
       }
     }
-    return matchesSearch && matchesDate
+
+    let matchesBastDate = true
+    if (startBast || endBast) {
+      if (!tglBastStr) {
+        matchesBastDate = false
+      } else {
+        if (startBast && tglBastStr < startBast) matchesBastDate = false
+        if (endBast && tglBastStr > endBast) matchesBastDate = false
+      }
+    }
+
+    return matchesSearch && matchesKontrakDate && matchesBastDate
   })
 
+  // Export Excel dengan konfigurasi wrapText otomatis pada kolom BAST & Kontrak serta penyesuaian ukuran kolom
   const handleExportExcel = () => {
     if (filteredData.length === 0) {
       alert('⚠️ Tidak ada data kontrak!')
       return
     }
+
     const excelData = filteredData.map((item, index) => ({
       'No': index + 1,
       'Nama Pekerjaan': item.nama_pekerjaan || '-',
-      'Nilai Kontrak (Rp)': item.nilai_kontrak || 0,
-      'No. Kontrak': item.no_kontrak || '-',
-      'Tgl Kontrak': item.tgl_kontrak || '-',
+      'BAST (No / Tgl)': `${item.no_bast || '-'}\n${formatTanggal(item.tgl_bast)}`,
+      'Nilai Kontrak': formatRupiah(item.nilai_kontrak),
+      'Perusahaan': item.nama_perusahaan || '-',
+      'Direktur': item.direktur || '-',
       'Nama PPK': item.nama_ppk || '-',
       'Nama PPTK': item.nama_pptk || '-',
-      'Nama Perusahaan': item.nama_perusahaan || '-',
-      'Direktur': item.direktur || '-',
+      'Kontrak (No / Tgl)': `${item.no_kontrak || '-'}\n${formatTanggal(item.tgl_kontrak)}`,
+      'No. Rekening Perusahaan': item.no_rek_perusahaan || '-',
+      'NPWP & Alamat': `${item.npwp_perusahaan || '-'}\n${item.alamat_perusahaan || '-'}`,
       'No. HP': item.no_hp || '-',
-      'NPWP Perusahaan': item.npwp_perusahaan || '-',
-      'No. Rekening': item.no_rek_perusahaan || '-',
-      'Alamat Perusahaan': item.alamat_perusahaan || '-',
-      'No. BAST': item.no_bast || '-',
-      'Tgl BAST': item.tgl_bast || '-',
       'Keterangan': item.keterangan || '-'
     }))
+
     const worksheet = XLSX.utils.json_to_sheet(excelData)
+
+    const range = XLSX.utils.decode_range(worksheet['!ref'])
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C })
+        if (!worksheet[cellAddress]) continue
+        
+        if (!worksheet[cellAddress].s) {
+          worksheet[cellAddress].s = {}
+        }
+        if (C === 2 || C === 8 || C === 10 || C === 1) {
+          worksheet[cellAddress].s.alignment = { wrapText: true, vertical: 'center' }
+        }
+      }
+    }
+
+    const colWidths = Object.keys(excelData[0]).map(key => {
+      let maxLen = key.length
+      excelData.forEach(row => {
+        const val = String(row[key] || '')
+        const lines = val.split('\n')
+        lines.forEach(line => {
+          if (line.length > maxLen) {
+            maxLen = line.length
+          }
+        })
+      })
+      return { wch: Math.max(maxLen + 4, 12) }
+    })
+
+    worksheet['!cols'] = colWidths
+
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Kontrak')
-    XLSX.writeFile(workbook, `Laporan_Kontrak_${startDate || 'Awal'}_s.d_${endDate || 'Akhir'}.xlsx`)
+    XLSX.writeFile(workbook, `Laporan_Kontrak.xlsx`)
   }
 
+  // Export PDF dengan tata letak bertingkat (tanggal di bawah nomor) sesuai tampilan tabel
   const handleExportPDF = () => {
     if (filteredData.length === 0) {
       alert('⚠️ Tidak ada data kontrak!')
@@ -246,39 +346,58 @@ export default function App() {
     }
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [215, 330] })
     doc.setFontSize(13)
-    doc.text('LAPORAN DATA KONTRAK & PEKERJAAN LENGKAP', 10, 12)
+    doc.text('LAPORAN DATA KONTRAK & PEKERJAAN', 10, 12)
     autoTable(doc, {
       startY: 20,
       margin: { left: 8, right: 8 },
-      head: [['No', 'Nama Pekerjaan', 'No. BAST', 'Tgl BAST', 'Nilai Kontrak', 'Perusahaan', 'Direktur', 'PPK', 'PPTK', 'No. Kontrak', 'Tgl Kontrak', 'No. Rek', 'NPWP', 'Alamat', 'No. HP', 'Ket.']],
+      head: [[
+        'No', 'Nama Pekerjaan', 'BAST (No / Tgl)', 'Nilai Kontrak', 'Perusahaan', 
+        'Direktur', 'Nama PPK', 'Nama PPTK', 'Kontrak (No / Tgl)', 'No. Rekening', 'NPWP & Alamat', 'No. HP', 'Keterangan'
+      ]],
       body: filteredData.map((item, i) => [
-        i + 1, item.nama_pekerjaan || '-', item.no_bast || '-', formatTanggal(item.tgl_bast), formatRupiah(item.nilai_kontrak),
-        item.nama_perusahaan || '-', item.direktur || '-', item.nama_ppk || '-', item.nama_pptk || '-', item.no_kontrak || '-',
-        formatTanggal(item.tgl_kontrak), item.no_rek_perusahaan || '-', item.npwp_perusahaan || '-', item.alamat_perusahaan || '-', item.no_hp || '-', item.keterangan || '-'
+        i + 1,
+        item.nama_pekerjaan || '-',
+        `${item.no_bast || '-'}\n${formatTanggal(item.tgl_bast)}`,
+        formatRupiah(item.nilai_kontrak),
+        item.nama_perusahaan || '-',
+        item.direktur || '-',
+        item.nama_ppk || '-',
+        item.nama_pptk || '-',
+        `${item.no_kontrak || '-'}\n${formatTanggal(item.tgl_kontrak)}`,
+        item.no_rek_perusahaan || '-',
+        `${item.npwp_perusahaan || '-'}\n${item.alamat_perusahaan || '-'}`,
+        item.no_hp || '-',
+        item.keterangan || '-'
       ]),
       theme: 'grid',
-      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 7 }
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 7 },
+      bodyStyles: { fontSize: 6.5 }
     })
-    doc.save(`Laporan_Kontrak_${startDate || 'Awal'}_s.d_${endDate || 'Akhir'}.pdf`)
+    doc.save(`Laporan_Kontrak.pdf`)
   }
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem)
-  const totalNilaiKontrak = dataList.reduce((acc, curr) => acc + (Number(curr.nilai_kontrak) || 0), 0)
+
+  const totalKontrak = filteredData.length
+  const totalNilaiKontrak = filteredData.reduce((acc, curr) => acc + (Number(curr.nilai_kontrak) || 0), 0)
+  const totalMitraPerusahaan = new Set(filteredData.map(item => item.nama_perusahaan).filter(Boolean)).size
 
   const handleResetFilter = () => {
     setSearchTerm('')
-    setStartDate('')
-    setEndDate('')
+    setStartKontrak('')
+    setEndKontrak('')
+    setStartBast('')
+    setEndBast('')
     setCurrentPage(1)
   }
 
   if (!user) {
     return (
       <Login onLoginSuccess={(userData) => {
-        localStorage.setItem('baphp_user', JSON.stringify(userData))
+        sessionStorage.setItem('baphp_user', JSON.stringify(userData))
         setUser(userData)
       }} />
     )
@@ -304,10 +423,14 @@ export default function App() {
                 fetchData={fetchData}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
-                startDate={startDate}
-                setStartDate={setStartDate}
-                endDate={endDate}
-                setEndDate={setEndDate}
+                startKontrak={startKontrak}
+                setStartKontrak={setStartKontrak}
+                endKontrak={endKontrak}
+                setEndKontrak={setEndKontrak}
+                startBast={startBast}
+                setStartBast={setStartBast}
+                endBast={endBast}
+                setEndBast={setEndBast}
                 currentPage={currentPage}
                 setCurrentPage={setCurrentPage}
                 itemsPerPage={itemsPerPage}
@@ -327,7 +450,9 @@ export default function App() {
                 indexOfFirstItem={indexOfFirstItem}
                 indexOfLastItem={indexOfLastItem}
                 totalPages={totalPages}
+                totalKontrak={totalKontrak}
                 totalNilaiKontrak={totalNilaiKontrak}
+                totalMitraPerusahaan={totalMitraPerusahaan}
               />
             } />
             <Route path="/tambah" element={
@@ -347,6 +472,13 @@ export default function App() {
       <LogoutModal
         show={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
+        onConfirm={confirmLogout}
+      />
+
+      <InactivityModal
+        show={showInactivityModal}
+        countdown={countdown}
+        onClose={() => setShowInactivityModal(false)}
         onConfirm={confirmLogout}
       />
     </div>
