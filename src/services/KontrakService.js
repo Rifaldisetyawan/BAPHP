@@ -43,15 +43,26 @@ export const updateKontrak = async (id, payload) => {
 }
 
 // 4. DELETE: Hapus Data Kontrak Berdasarkan ID
-export const deleteKontrak = async (id) => {
-  const { data, error } = await supabase
-    .from(TABLE_NAME)
+export const deleteKontrak = async (idOrObject) => {
+  // Ekstrak ID secara otomatis jika yang masuk tidak sengaja berupa objek atau event React
+  let actualId = idOrObject;
+  if (typeof idOrObject === 'object' && idOrObject !== null) {
+    actualId = idOrObject.id || idOrObject.currentTarget?.getAttribute('data-id');
+  }
+
+  if (!actualId) {
+    throw new Error("ID kontrak tidak valid atau kosong.");
+  }
+
+  // Lanjutkan eksekusi hapus ke Supabase menggunakan ID murni
+  const { error } = await supabase
+    .from('kontrak_pekerjaan') // Sesuaikan dengan nama tabel Supabase Anda
     .delete()
-    .eq('id', id)
+    .eq('id', Number(actualId));
 
   if (error) {
-    console.error('Error deleting data:', error.message)
-    throw error
+    throw error;
   }
-  return data
+  
+  return true;
 }

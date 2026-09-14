@@ -35,7 +35,9 @@ export default function Dashboard({
   totalPages,
   totalKontrak,
   totalNilaiKontrak,
-  totalMitraPerusahaan
+  totalMitraPerusahaan,
+  sortDirection,
+  handleSortToggle
 }) {
   return (
     <div className="space-y-6">
@@ -190,7 +192,12 @@ export default function Dashboard({
               <tr>
                 <th className="py-3.5 px-4">No</th>
                 <th className="py-3.5 px-4">Nama Pekerjaan</th>
-                <th className="py-3.5 px-4">BAST (No / Tgl)</th>
+                <th 
+                  onClick={handleSortToggle} 
+                  className="cursor-pointer px-4 py-3.5 text-left hover:bg-slate-200/60 select-none text-slate-700"
+                >
+                  No BAST {sortDirection === 'asc' ? '▲' : '▼'}
+                </th>
                 <th className="py-3.5 px-4">Nilai Kontrak</th>
                 <th className="py-3.5 px-4">Perusahaan</th>
                 <th className="py-3.5 px-4">Direktur</th>
@@ -267,7 +274,7 @@ export default function Dashboard({
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDelete(item)}
+                            onClick={() => handleDelete(item.id, item.url_pdf)}
                             className="w-full px-3 py-2 text-xs text-rose-600 hover:bg-slate-50 flex items-center gap-2 font-medium"
                           >
                             🗑️ Hapus
