@@ -169,8 +169,15 @@ export default function App() {
     navigate('/tambah')
   }
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // Validasi: File PDF wajib diunggah, baik saat menambah maupun mengedit data
+    if (!pdfFile) {
+      alert('⚠️ File PDF wajib diunggah!')
+      return
+    }
+
     setLoading(true)
     try {
       let uploadedUrl = formData.url_pdf
@@ -194,7 +201,6 @@ export default function App() {
       if (editId) {
         await updateKontrak(editId, payload)
 
-        // Tambahan baris log (tidak mengubah logika Synology/update)
         await supabase.from('activity_logs').insert([
           {
             user_name: user?.nama_lengkap || user?.username,
@@ -207,7 +213,6 @@ export default function App() {
       } else {
         await createKontrak(payload)
 
-        // Tambahan baris log (tidak mengubah logika Synology/create)
         await supabase.from('activity_logs').insert([
           {
             user_name: user?.nama_lengkap || user?.username,
