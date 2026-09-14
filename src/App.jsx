@@ -13,6 +13,8 @@ import { uploadToSynologyLocal, deleteFromSynologyLocal } from './services/Synol
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import UserManagement from './components/UserManagement'
+import ActivityLog from './components/ActivityLog'
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -28,7 +30,7 @@ export default function App() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showInactivityModal, setShowInactivityModal] = useState(false)
   const [countdown, setCountdown] = useState(60)
-  
+
   const [startKontrak, setStartKontrak] = useState('')
   const [endKontrak, setEndKontrak] = useState('')
   const [startBast, setStartBast] = useState('')
@@ -177,7 +179,7 @@ export default function App() {
         const namaPekerjaan = (formData.nama_pekerjaan || 'Pekerjaan').replace(/[/\\?%*:|"<>]/g, '-')
         const newFileName = `BA_${namaPekerjaan}.pdf`
         const renamedPdfFile = new File([pdfFile], newFileName, { type: pdfFile.type })
-        
+
         uploadedUrl = await uploadToSynologyLocal(renamedPdfFile, formData.nama_pekerjaan, formData.url_pdf)
       }
 
@@ -191,9 +193,29 @@ export default function App() {
 
       if (editId) {
         await updateKontrak(editId, payload)
+
+        // Tambahan baris log (tidak mengubah logika Synology/update)
+        await supabase.from('activity_logs').insert([
+          {
+            user_name: user?.nama_lengkap || user?.username,
+            action: 'mengedit',
+            job_name: formData.nama_pekerjaan
+          }
+        ])
+
         alert('Data kontrak berhasil diperbarui!')
       } else {
         await createKontrak(payload)
+
+        // Tambahan baris log (tidak mengubah logika Synology/create)
+        await supabase.from('activity_logs').insert([
+          {
+            user_name: user?.nama_lengkap || user?.username,
+            action: 'menambahkan',
+            job_name: formData.nama_pekerjaan
+          }
+        ])
+
         alert('Data kontrak berhasil disimpan!')
       }
 
@@ -209,22 +231,32 @@ export default function App() {
     }
   }
 
-  const handleDelete = async (id, urlPdf) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus data ini?")) return;
+const handleDelete = async (id, urlPdf, namaPekerjaan) => {
+  if (!window.confirm('Apakah Anda yakin ingin menghapus data ini?')) return
 
-    try {
-      if (urlPdf) {
-        await deleteFromSynologyLocal(urlPdf);
-      }
-
-      await deleteKontrak(id);
-
-      alert('Data dan file berhasil dihapus!');
-      fetchData();
-    } catch (error) {
-      alert(`Gagal menghapus: ${error.message}`);
+  try {
+    if (urlPdf) {
+      await deleteFromSynologyLocal(urlPdf)
     }
-  };
+
+    await deleteKontrak(id)
+
+    // Catat log aktivitas penghapusan
+    await supabase.from('activity_logs').insert([
+      {
+        user_name: user?.nama_lengkap || user?.username,
+        action: 'menghapus',
+        job_name: namaPekerjaan
+      }
+    ])
+
+    alert('Data dan file berhasil dihapus!')
+    fetchData()
+  } catch (error) {
+    console.error('Gagal menghapus:', error.message)
+    alert(`Gagal menghapus: ${error.message}`)
+  }
+}
 
   const formatTanggal = (dateString) => {
     if (!dateString) return '-'
@@ -290,20 +322,20 @@ export default function App() {
     }
   }
 
-  const sortedFilteredData = [...filteredData].sort((a, b) => {
+const sortedFilteredData = [...filteredData].sort((a, b) => {
     const infoA = extractBastInfo(a.no_bast)
     const infoB = extractBastInfo(b.no_bast)
 
     // Urutkan berdasarkan Tahun terlebih dahulu
     if (infoA.year !== infoB.year) {
-      return sortDirection === 'asc' 
-        ? infoA.year - infoB.year 
+      return sortDirection === 'asc'
+        ? infoA.year - infoB.year
         : infoB.year - infoA.year
     }
 
-    // Jika tahun sama, urutkan berdasarkan angka awalan No BAST
-    return sortDirection === 'asc' 
-      ? infoA.num - infoB.num 
+    // Jika tahun sama, urutkan berdasarkan angka awalan No BAST (misal: 01, 02, dst)
+    return sortDirection === 'asc'
+      ? infoA.num - infoB.num
       : infoB.num - infoA.num
   })
 
@@ -336,7 +368,7 @@ export default function App() {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C })
         if (!worksheet[cellAddress]) continue
-        
+
         if (!worksheet[cellAddress].s) {
           worksheet[cellAddress].s = {}
         }
@@ -379,7 +411,7 @@ export default function App() {
       startY: 20,
       margin: { left: 8, right: 8 },
       head: [[
-        'No', 'Nama Pekerjaan', 'BAST (No / Tgl)', 'Nilai Kontrak', 'Perusahaan', 
+        'No', 'Nama Pekerjaan', 'BAST (No / Tgl)', 'Nilai Kontrak', 'Perusahaan',
         'Direktur', 'Nama PPK', 'Nama PPTK', 'Kontrak (No / Tgl)', 'No. Rekening', 'NPWP & Alamat', 'No. HP', 'Keterangan'
       ]],
       body: sortedFilteredData.map((item, i) => [
@@ -495,7 +527,13 @@ export default function App() {
                 loading={loading}
               />
             } />
+            <Route
+              path="/users"
+              element={user?.role === 'admin' ? <UserManagement /> : <Dashboard />}
+            />
+            <Route path="/logs" element={<ActivityLog />} />
           </Routes>
+
         </main>
       </div>
 

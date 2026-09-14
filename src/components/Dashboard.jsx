@@ -37,7 +37,8 @@ export default function Dashboard({
   totalNilaiKontrak,
   totalMitraPerusahaan,
   sortDirection,
-  handleSortToggle
+  handleSortToggle,
+  user
 }) {
   return (
     <div className="space-y-6">
@@ -274,7 +275,7 @@ export default function Dashboard({
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDelete(item.id, item.url_pdf)}
+                            onClick={() => handleDelete(item.id, item.url_pdf, item.nama_pekerjaan)}
                             className="w-full px-3 py-2 text-xs text-rose-600 hover:bg-slate-50 flex items-center gap-2 font-medium"
                           >
                             🗑️ Hapus

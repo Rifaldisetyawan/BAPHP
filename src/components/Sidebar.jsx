@@ -28,7 +28,23 @@ export default function Sidebar({ user, onLogoutClick, handleTambahBaru }) {
           >
             <span>📝</span> Tambah Kontrak
           </Link>
+          {user?.role === 'admin' && (
+            <Link
+              to="/users"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all ${location.pathname === '/users' ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              <span>👥</span> Manajemen User
+            </Link>
+          )}
+          <Link
+            to="/logs"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all ${location.pathname === '/logs' ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            <span>📜</span> Log Aktivitas
+          </Link>
+
         </div>
+
       </div>
 
       <div className="space-y-3">
