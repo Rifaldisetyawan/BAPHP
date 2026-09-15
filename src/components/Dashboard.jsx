@@ -186,31 +186,31 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* TABEL */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs whitespace-nowrap">
-            <thead className="bg-slate-50/80 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-100">
+        {/* TABEL DENGAN SCROLL VERTIKAL & STICKY HEADER */}
+        <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
+          <table className="w-full text-left text-xs whitespace-nowrap relative">
+            <thead className="bg-slate-100 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200 sticky top-0 z-10 shadow-sm">
               <tr>
-                <th className="py-3.5 px-4">No</th>
-                <th className="py-3.5 px-4">Nama Pekerjaan</th>
+                <th className="py-3.5 px-4 bg-slate-100">No</th>
+                <th className="py-3.5 px-4 bg-slate-100">Nama Pekerjaan</th>
                 <th 
                   onClick={handleSortToggle} 
-                  className="cursor-pointer px-4 py-3.5 text-left hover:bg-slate-200/60 select-none text-slate-700"
+                  className="cursor-pointer px-4 py-3.5 text-left hover:bg-slate-200/60 select-none text-slate-700 bg-slate-100"
                 >
                   No BAST {sortDirection === 'asc' ? '▲' : '▼'}
                 </th>
-                <th className="py-3.5 px-4">Nilai Kontrak</th>
-                <th className="py-3.5 px-4">Perusahaan</th>
-                <th className="py-3.5 px-4">Direktur</th>
-                <th className="py-3.5 px-4">Nama PPK</th>
-                <th className="py-3.5 px-4">Nama PPTK</th>
-                <th className="py-3.5 px-4">Kontrak (No / Tgl)</th>
-                <th className="py-3.5 px-4">No. Rekening Perusahaan</th>
-                <th className="py-3.5 px-4">NPWP & Alamat</th>
-                <th className="py-3.5 px-4">No. HP</th>
-                <th className="py-3.5 px-4">Keterangan</th>
-                <th className="py-3.5 px-4">PDF</th>
-                <th className="py-3.5 px-4 text-center">Aksi</th>
+                <th className="py-3.5 px-4 bg-slate-100">Nilai Kontrak</th>
+                <th className="py-3.5 px-4 bg-slate-100">Perusahaan</th>
+                <th className="py-3.5 px-4 bg-slate-100">Direktur</th>
+                <th className="py-3.5 px-4 bg-slate-100">Nama PPK</th>
+                <th className="py-3.5 px-4 bg-slate-100">Nama PPTK</th>
+                <th className="py-3.5 px-4 bg-slate-100">Kontrak (No / Tgl)</th>
+                <th className="py-3.5 px-4 bg-slate-100">No. Rekening Perusahaan</th>
+                <th className="py-3.5 px-4 bg-slate-100">NPWP & Alamat</th>
+                <th className="py-3.5 px-4 bg-slate-100">No. HP</th>
+                <th className="py-3.5 px-4 bg-slate-100">Keterangan</th>
+                <th className="py-3.5 px-4 bg-slate-100">PDF</th>
+                <th className="py-3.5 px-4 text-center bg-slate-100">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700">
