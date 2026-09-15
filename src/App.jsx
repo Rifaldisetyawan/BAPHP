@@ -169,7 +169,7 @@ export default function App() {
     navigate('/tambah')
   }
 
-const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
 
     // Validasi: File PDF wajib diunggah, baik saat menambah maupun mengedit data
@@ -236,32 +236,31 @@ const handleSubmit = async (e) => {
     }
   }
 
-const handleDelete = async (id, urlPdf, namaPekerjaan) => {
-  if (!window.confirm('Apakah Anda yakin ingin menghapus data ini?')) return
+  const handleDelete = async (id, urlPdf, namaPekerjaan) => {
+    if (!window.confirm('Apakah Anda yakin ingin menghapus data ini?')) return
 
-  try {
-    if (urlPdf) {
-      await deleteFromSynologyLocal(urlPdf)
-    }
-
-    await deleteKontrak(id)
-
-    // Catat log aktivitas penghapusan
-    await supabase.from('activity_logs').insert([
-      {
-        user_name: user?.nama_lengkap || user?.username,
-        action: 'menghapus',
-        job_name: namaPekerjaan
+    try {
+      if (urlPdf) {
+        await deleteFromSynologyLocal(urlPdf)
       }
-    ])
 
-    alert('Data dan file berhasil dihapus!')
-    fetchData()
-  } catch (error) {
-    console.error('Gagal menghapus:', error.message)
-    alert(`Gagal menghapus: ${error.message}`)
+      await deleteKontrak(id)
+
+      await supabase.from('activity_logs').insert([
+        {
+          user_name: user?.nama_lengkap || user?.username,
+          action: 'menghapus',
+          job_name: namaPekerjaan
+        }
+      ])
+
+      alert('Data dan file berhasil dihapus!')
+      fetchData()
+    } catch (error) {
+      console.error('Gagal menghapus:', error.message)
+      alert(`Gagal menghapus: ${error.message}`)
+    }
   }
-}
 
   const formatTanggal = (dateString) => {
     if (!dateString) return '-'
@@ -312,7 +311,6 @@ const handleDelete = async (id, urlPdf, namaPekerjaan) => {
     return matchesSearch && matchesKontrakDate && matchesBastDate
   })
 
-  // Logika Sorting Berdasarkan Tahun & Angka Awalan No BAST
   const handleSortToggle = () => {
     setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
   }
@@ -327,18 +325,16 @@ const handleDelete = async (id, urlPdf, namaPekerjaan) => {
     }
   }
 
-const sortedFilteredData = [...filteredData].sort((a, b) => {
+  const sortedFilteredData = [...filteredData].sort((a, b) => {
     const infoA = extractBastInfo(a.no_bast)
     const infoB = extractBastInfo(b.no_bast)
 
-    // Urutkan berdasarkan Tahun terlebih dahulu
     if (infoA.year !== infoB.year) {
       return sortDirection === 'asc'
         ? infoA.year - infoB.year
         : infoB.year - infoA.year
     }
 
-    // Jika tahun sama, urutkan berdasarkan angka awalan No BAST (misal: 01, 02, dst)
     return sortDirection === 'asc'
       ? infoA.num - infoB.num
       : infoB.num - infoA.num
@@ -469,17 +465,17 @@ const sortedFilteredData = [...filteredData].sort((a, b) => {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-800 font-sans antialiased relative">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] text-slate-800 font-sans antialiased relative">
       <Sidebar
         user={user}
         onLogoutClick={() => setShowLogoutModal(true)}
         handleTambahBaru={handleTambahBaru}
       />
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         <Header onLogoutClick={() => setShowLogoutModal(true)} />
 
-        <main className="p-6 lg:p-8 space-y-6">
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8 pb-20 space-y-6">
           <Routes>
             <Route path="/" element={
               <Dashboard
@@ -538,7 +534,6 @@ const sortedFilteredData = [...filteredData].sort((a, b) => {
             />
             <Route path="/logs" element={<ActivityLog />} />
           </Routes>
-
         </main>
       </div>
 
