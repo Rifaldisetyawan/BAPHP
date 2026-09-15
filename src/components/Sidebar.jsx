@@ -42,6 +42,14 @@ export default function Sidebar({ user, onLogoutClick, handleTambahBaru }) {
           >
             <span>📜</span> Log Aktivitas
           </Link>
+          {user?.role !== 'admin' && (
+            <Link
+              to="/ubah-password"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all ${location.pathname === '/ubah-password' ? 'bg-slate-100 text-slate-900 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              <span>🔒</span> Ubah Password
+            </Link>
+          )}
 
         </div>
 

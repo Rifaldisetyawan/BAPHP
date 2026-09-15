@@ -15,6 +15,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import UserManagement from './components/UserManagement'
 import ActivityLog from './components/ActivityLog'
+import ChangePassword from './components/ChangePassword'
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -533,6 +534,7 @@ export default function App() {
               element={user?.role === 'admin' ? <UserManagement /> : <Dashboard />}
             />
             <Route path="/logs" element={<ActivityLog />} />
+            <Route path="/ubah-password" element={<ChangePassword user={user} />} />
           </Routes>
         </main>
       </div>
