@@ -3,9 +3,8 @@ import { supabase } from '../supabaseClient'
 
 export default function ActivityLog() {
   const [logs, setLogs] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
 
   const fetchLogs = async () => {
     setLoading(true)
@@ -14,7 +13,7 @@ export default function ActivityLog() {
         .from('activity_logs')
         .select('*')
         .order('created_at', { ascending: false })
-
+      
       if (error) throw error
       setLogs(data || [])
     } catch (error) {
@@ -28,94 +27,96 @@ export default function ActivityLog() {
     fetchLogs()
   }, [])
 
-  // Logika Pagination (Maksimal 10 item per halaman)
-  const totalPages = Math.ceil(logs.length / itemsPerPage) || 1
-  const indexOfLastItem = currentPage * itemsPerPage
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage
-  const currentLogs = logs.slice(indexOfFirstItem, indexOfLastItem)
-
-  const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage(prev => prev + 1)
-  }
-
-  const handlePrev = () => {
-    if (currentPage > 1) setCurrentPage(prev => prev - 1)
-  }
+  // Filter log berdasarkan nama pekerjaan (job_name) atau nama pengguna
+  const filteredLogs = logs.filter(log => {
+    const s = searchTerm.toLowerCase().trim()
+    return (
+      !s ||
+      log.job_name?.toLowerCase().includes(s) ||
+      log.user_name?.toLowerCase().includes(s) ||
+      log.action?.toLowerCase().includes(s)
+    )
+  })
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800">Log Aktivitas Pengguna</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-slate-900">Log Aktivitas</h1>
+        <button
+          type="button"
+          onClick={fetchLogs}
+          disabled={loading}
+          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition-all disabled:opacity-50 flex items-center gap-1.5"
+        >
+          🔄 {loading ? 'Memuat...' : 'Refresh'}
+        </button>
+      </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {/* SEARCH BAR UNTUK NAMA PEKERJAAN */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+        <div className="relative w-full">
+          <span className="absolute inset-y-0 left-3.5 flex items-center text-slate-400 text-sm">🔍</span>
+          <input
+            type="text"
+            placeholder="Cari berdasarkan Nama Pekerjaan, Pengguna, atau Aksi..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 text-xs font-bold"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* TABEL LOG AKTIVITAS */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                <th className="py-3 px-4">No</th>
-                <th className="py-3 px-4">Pengguna</th>
-                <th className="py-3 px-4">Aktivitas</th>
-                <th className="py-3 px-4">Nama Pekerjaan</th>
-                <th className="py-3 px-4">Waktu</th>
+          <table className="w-full text-left text-xs whitespace-nowrap">
+            <thead className="bg-slate-100 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="py-3.5 px-4">Waktu</th>
+                <th className="py-3.5 px-4">Pengguna</th>
+                <th className="py-3.5 px-4">Aksi</th>
+                <th className="py-3.5 px-4">Nama Pekerjaan</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 text-sm">
-              {loading ? (
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-6 text-slate-500">Memuat data...</td>
-                </tr>
-              ) : currentLogs.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-6 text-slate-500">Belum ada aktivitas tercatat.</td>
+                  <td colSpan="4" className="text-center py-12 text-slate-400">
+                    Tidak ada log aktivitas ditemukan.
+                  </td>
                 </tr>
               ) : (
-                currentLogs.map((log, index) => (
-                  <tr key={log.id || index} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3 px-4 text-slate-500">{indexOfFirstItem + index + 1}</td>
-                    <td className="py-3 px-4 font-medium text-slate-800">{log.user_name || '-'}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
-                        log.action === 'menambahkan' ? 'bg-emerald-100 text-emerald-800' :
-                        log.action === 'mengedit' ? 'bg-amber-100 text-amber-800' :
-                        'bg-rose-100 text-rose-800'
+                filteredLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3.5 px-4 text-slate-500">
+                      {log.created_at ? new Date(log.created_at).toLocaleString('id-ID', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short'
+                      }) : '-'}
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800">{log.user_name || '-'}</td>
+                    <td className="py-3.5 px-4">
+                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-semibold ${
+                        log.action === 'menambahkan' ? 'bg-emerald-50 text-emerald-700' :
+                        log.action === 'mengedit' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'
                       }`}>
                         {log.action}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-slate-700">{log.job_name || '-'}</td>
-                    <td className="py-3 px-4 text-slate-500 text-xs">
-                      {log.created_at ? new Date(log.created_at).toLocaleString('id-ID') : '-'}
-                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">{log.job_name || '-'}</td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
-        </div>
-
-        {/* Kontrol Navigasi Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-200">
-          <span className="text-sm text-slate-500">
-            Menampilkan {currentLogs.length > 0 ? indexOfFirstItem + 1 : 0} - {indexOfFirstItem + currentLogs.length} dari {logs.length} data
-          </span>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handlePrev}
-              disabled={currentPage === 1}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Sebelumnya
-            </button>
-            <span className="text-sm font-medium text-slate-700 px-2">
-              Halaman {currentPage} dari {totalPages}
-            </span>
-            <button
-              onClick={handleNext}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Selanjutnya
-            </button>
-          </div>
         </div>
       </div>
     </div>
